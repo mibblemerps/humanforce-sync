@@ -65,6 +65,15 @@ const googleAuth = await getGoogleAuth();
 const calendar = google.calendar({version: 'v3', auth: googleAuth});
 let calendarEventColor = null;
 
+function today() {
+    let date = new Date();
+    date.setHours(0);
+    date.setMinutes(0);
+    date.setSeconds(0);
+    date.setMilliseconds(0);
+    return date;
+}
+
 /**
  * @param {Shift} shift
  */
@@ -142,7 +151,7 @@ async function findShiftsInGoogleCalendar() {
     const response = await calendar.events.list({
         calendarId: calendarId,
         privateExtendedProperty: ['humanforceShiftCompany=' + humanforce.companyName],
-        timeMin: new Date().toISOString() // we ignore shifts that have already happened (we don't want to update them)
+        timeMin: today()
     });
 
     return response.data.items;
@@ -151,7 +160,7 @@ async function findShiftsInGoogleCalendar() {
 async function sync() {
     console.log('Performing sync...');
 
-    const shifts = await humanforce.getCalendar(new Date())
+    const shifts = await humanforce.getCalendar(today())
     const events = await findShiftsInGoogleCalendar();
     calendarEventColor = events[events.length - 1].colorId;
 
@@ -175,7 +184,7 @@ async function sync() {
     for (const event of events) {
         const shift = shifts.find(s => s.guid === event.extendedProperties.private.humanforceShiftGuid);
         if (!shift) {
-            console.log(`Cancelling shift ${event.summary} ${event.start} - ${event.end}...`);
+            console.log(`Cancelling shift ${event.summary} ${event.start.dateTime} - ${event.end.dateTime}...`);
             await cancelEvent(event);
         }
     }
